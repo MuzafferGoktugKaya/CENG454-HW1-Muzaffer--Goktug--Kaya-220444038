@@ -1,25 +1,24 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
 public class FlightController : MonoBehaviour
 {
-    [SerializeField] private float pitchSpeed  = 45f;  // degrees/second 
-    [SerializeField] private float yawSpeed    = 45f;  // degrees/second 
-    [SerializeField] private float rollSpeed   = 45f;  // degrees/second 
-    [SerializeField] private float thrustSpeed = 5f;   // units/second
-
-    // TODO (Task 3-A)
+    [Header("Movement Settings")]
+    [SerializeField] private float pitchSpeed  = 45f;
+    [SerializeField] private float yawSpeed    = 45f;
+    [SerializeField] private float rollSpeed   = 45f;
+    [SerializeField] private float thrustSpeed = 15f; // Hızı biraz artırdık
 
     private Rigidbody rb;
-    
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    private float currentThrust = 0f;
+
     void Start()
     {
-        // TODO (Task 3-B)
         rb = GetComponent<Rigidbody>(); 
-        rb.freezeRotation = true;
+        rb.useGravity = false; // Uçuş modunda yerçekimini kapatalım
+        rb.freezeRotation = true; // Fizik motorunun rotasyonu bozmasını engelle
     }
 
-    // Update is called once per frame
     void Update()
     {
         HandleRotation(); 
@@ -27,23 +26,34 @@ public class FlightController : MonoBehaviour
     }
 
     private void HandleRotation() 
-{
-    float pitchInput = Input.GetAxis("Vertical");
-    transform.Rotate(Vector3.right * pitchInput * pitchSpeed * Time.deltaTime);
-
-    float yawInput = Input.GetAxis("Horizontal");
-    transform.Rotate(Vector3.up * yawInput * yawSpeed * Time.deltaTime);
-
-    float rollInput = 0f;
-    if (Input.GetKey(KeyCode.Q)) rollInput = 1f;
-    else if (Input.GetKey(KeyCode.E)) rollInput = -1f;
-    transform.Rotate(Vector3.forward * rollInput * rollSpeed * Time.deltaTime);
-}
-private void HandleThrust() 
-{
-    if (Input.GetKey(KeyCode.Space)) 
     {
-        transform.Translate(Vector3.forward * thrustSpeed * Time.deltaTime);
+        // GetAxis yerine GetAxisRaw kullanarak daha keskin ama yumuşatılabilir veri alıyoruz
+        float pitchInput = Input.GetAxis("Vertical");
+        float yawInput = Input.GetAxis("Horizontal");
+        
+        float rollInput = 0f;
+        if (Input.GetKey(KeyCode.Q)) rollInput = 1f;
+        else if (Input.GetKey(KeyCode.E)) rollInput = -1f;
+
+        // Rotasyonları uygula
+        transform.Rotate(Vector3.right * pitchInput * pitchSpeed * Time.deltaTime);
+        transform.Rotate(Vector3.up * yawInput * yawSpeed * Time.deltaTime);
+        transform.Rotate(Vector3.forward * rollInput * rollSpeed * Time.deltaTime);
     }
-}
+
+    private void HandleThrust() 
+    {
+        // Space'e basılı tutunca hız yavaşça artsın (Daha gerçekçi gaz verme)
+        if (Input.GetKey(KeyCode.Space)) 
+        {
+            currentThrust = Mathf.Lerp(currentThrust, thrustSpeed, Time.deltaTime);
+        }
+        else 
+        {
+            // Bırakınca yavaşça süzülerek dursun
+            currentThrust = Mathf.Lerp(currentThrust, 0f, Time.deltaTime * 0.5f);
+        }
+
+        transform.Translate(Vector3.forward * currentThrust * Time.deltaTime);
+    }
 }
